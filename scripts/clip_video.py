@@ -7,6 +7,7 @@
 import sys
 import shutil
 import subprocess
+import json
 from pathlib import Path
 from typing import Union
 
@@ -203,8 +204,56 @@ def save_subtitles_as_srt(subtitles: list, output_path: str):
 
 def main():
     """命令行入口"""
+    # Zapier Webhook JSON 输入模式
+    # 允许直接传入 JSON 字符串或 JSON 文件路径，便于自动化调用
+    if len(sys.argv) == 3 and sys.argv[1] == "--zapier-input":
+        zapier_input = sys.argv[2]
+
+        try:
+            if Path(zapier_input).exists():
+                with open(zapier_input, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+            else:
+                payload = json.loads(zapier_input)
+        except Exception as e:
+            print(f"❌ 无法解析 Zapier 输入: {e}")
+            print("支持两种格式：")
+            print("1) JSON 文件路径")
+            print("2) JSON 字符串")
+            sys.exit(1)
+
+        # 兼容常见 Zapier 字段命名
+        video_path = payload.get('video_path') or payload.get('videoPath')
+        start_time = payload.get('start_time') or payload.get('startTime') or payload.get('clip_start')
+        end_time = payload.get('end_time') or payload.get('endTime') or payload.get('clip_end')
+        output_path = payload.get('output_path') or payload.get('outputPath')
+
+        if not all([video_path, start_time, end_time, output_path]):
+            print("❌ Zapier 输入缺少必需字段")
+            print("必需字段: video_path/videoPath, start_time/startTime, end_time/endTime, output_path/outputPath")
+            sys.exit(1)
+
+        try:
+            output = clip_video(video_path, start_time, end_time, output_path)
+            print("\n" + "=" * 60)
+            print("剪辑结果 (JSON):")
+            print(json.dumps({
+                "success": True,
+                "output_path": output
+            }, indent=2, ensure_ascii=False))
+            return
+        except Exception as e:
+            print("\n" + "=" * 60)
+            print("剪辑结果 (JSON):")
+            print(json.dumps({
+                "success": False,
+                "error": str(e)
+            }, indent=2, ensure_ascii=False))
+            sys.exit(1)
+
     if len(sys.argv) < 5:
         print("Usage: python clip_video.py <video> <start_time> <end_time> <output>")
+        print("   or: python clip_video.py --zapier-input <json_file_or_json_string>")
         print("\nArguments:")
         print("  video      - 输入视频文件路径")
         print("  start_time - 起始时间（秒数或时间字符串，如 00:01:30）")

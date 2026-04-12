@@ -109,6 +109,47 @@ or
 5. **Processing** - Clips video, translates subtitles, burns subtitles (if requested)
 6. **Output** - Organized files in `./youtube-clips/<timestamp>/`
 
+### Zapier Webhook Integration
+
+You can run a webhook endpoint so Zapier can trigger clipping automatically:
+
+```bash
+python3 scripts/zapier_webhook_handler.py
+```
+
+Default endpoint:
+- `POST /zapier-webhook` (port `8765`)
+- `GET /health` for health checks
+
+Example Zapier payload (download + clip):
+
+```json
+{
+  "youtube_url": "https://youtube.com/watch?v=Ckt1cj0xjRM",
+  "start_time": "00:00:30",
+  "end_time": "00:02:00",
+  "output_dir": "./youtube-clips",
+  "output_filename": "intro_clip.mp4"
+}
+```
+
+Example Zapier payload (clip existing local video):
+
+```json
+{
+  "video_path": "/path/to/local/video.mp4",
+  "start_time": "30",
+  "end_time": "120",
+  "output_dir": "./youtube-clips"
+}
+```
+
+You can also call clip script directly with Zapier-style JSON input:
+
+```bash
+python3 scripts/clip_video.py --zapier-input '{"video_path":"input.mp4","start_time":"00:00:30","end_time":"00:02:00","output_path":"out.mp4"}'
+```
+
 ### Output Files
 
 For each clipped chapter:
